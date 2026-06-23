@@ -11,7 +11,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { execSync } from "node:child_process";
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, beforeAll } from "vitest";
 import toml from "@iarna/toml";
 
 const ROOT = path.resolve(import.meta.dirname, "..");
