@@ -1,0 +1,26 @@
+{
+  "name": "folio-puller",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Folio puller — Node container: sole filesystem writer, durable dedupe store, outbound WS to DO broker",
+  "type": "module",
+  "engines": {
+    "node": "^24"
+  },
+  "scripts": {
+    "start": "node --enable-source-maps dist/index.js",
+    "build": "tsc",
+    "typecheck": "tsc --noEmit",
+    "test": "node --experimental-vm-modules node_modules/.bin/jest"
+  },
+  "dependencies": {
+    "ws": "8.21.0"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.10",
+    "@types/ws": "^8.5.14",
+    "jest": "^29.7.0",
+    "ts-jest": "^29.4.0",
+    "typescript": "5.9.3"
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "name": "@folio/frame-protocol",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Versioned Relay↔Puller frame protocol types and conformance vectors (AD-16)",
+  "type": "module",
+  "exports": {
+    ".": "./index.ts"
+  },
+  "devDependencies": {
+    "typescript": "5.9.3"
+  }
+}

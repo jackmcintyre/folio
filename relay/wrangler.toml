@@ -1,0 +1,28 @@
+# Folio Relay — Wrangler configuration
+#
+# Runtime pin rationale (AR-1, AD-20):
+#   compatibility_date = "2026-06-23"
+#     Pins the Cloudflare Workers runtime to the set of compatibility flags active
+#     on 2026-06-23.  Later dates can only ADD flags, never silently remove them,
+#     so this is the safe minimum that matches our test matrix.  Bump only
+#     deliberately after verifying the change-log for breaking compatibility flags.
+#
+#   compatibility_flags = ["nodejs_compat"]
+#     Enables the Node.js compatibility layer so `agents` and the MCP SDK can
+#     use Node-style crypto, buffer, stream, etc. without a polyfill.  Listed
+#     explicitly because the flag is load-bearing for our deps; removing it
+#     would break the build.
+
+name = "folio-relay"
+main = "src/transport/index.ts"
+compatibility_date = "2026-06-23"
+compatibility_flags = ["nodejs_compat"]
+
+[durable_objects]
+bindings = [
+  { name = "BROKER", class_name = "BrokerDO" }
+]
+
+[[migrations]]
+tag = "v1"
+new_classes = ["BrokerDO"]

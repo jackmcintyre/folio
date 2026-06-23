@@ -1,0 +1,11 @@
+{
+  "name": "folio-build-gate",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Build-gate shim used by the Flow orchestration tool — proxies pnpm build/test/knip to the root project scripts.",
+  "scripts": {
+    "build": "npm run typecheck --prefix ../.. && npm run typecheck --prefix ../../relay && npm run typecheck --prefix ../../puller",
+    "test": "npm test --prefix ../..",
+    "knip": "echo 'no knip (scaffold story — no dead-code check)' && exit 0"
+  }
+}
