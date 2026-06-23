@@ -1,0 +1,42 @@
+# ──────────────────────────────────────────────────────────────
+# Folio — .gitignore
+# Repo is public from day one.
+# Principle: commit the RESULT and what's needed to build/run/understand it.
+# Ignore (a) private design process and (b) regenerable tooling installs.
+# NOTE: .gitignore has no inline comments — keep comments on their own lines.
+# ──────────────────────────────────────────────────────────────
+
+# --- Private design process & working artefacts (internal thinking) ---
+# brief, PRD, architecture, epics, decision memlogs — process, not result
+/_bmad-output/
+# Flow orchestration workspace & run state
+/.flow/
+
+# --- Regenerable tooling installs (reinstall, don't commit) ---
+# BMAD framework — restore with: npx bmad-method install
+/_bmad/
+# Claude Code project config + installed skills (personal/internal)
+/.claude/
+# Flow hired-team personas — orchestration state, not a build artefact
+/team/
+
+# --- Secrets & local env (never commit) ---
+.env
+.env.*
+!.env.example
+# wrangler / Cloudflare local secrets
+.dev.vars
+# Cloudflare Workers local state
+.wrangler/
+*.local
+
+# --- Node / build outputs ---
+node_modules/
+dist/
+build/
+coverage/
+*.log
+
+# --- OS / editor noise ---
+.DS_Store
+Thumbs.db
