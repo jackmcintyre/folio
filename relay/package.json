@@ -1,0 +1,24 @@
+{
+  "name": "relay",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "check": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "agents": "0.16.2",
+    "@cloudflare/workers-oauth-provider": "0.8.1",
+    "@modelcontextprotocol/sdk": "^1.29.0"
+  },
+  "devDependencies": {
+    "typescript": "5.9.3",
+    "wrangler": "^4.0.0",
+    "@cloudflare/workers-types": "^4.0.0",
+    "vitest": "^4.0.0",
+    "@cloudflare/vitest-pool-workers": "^0.16.0"
+  }
+}

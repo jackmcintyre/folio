@@ -1,0 +1,17 @@
+name = "relay"
+main = "src/transport/index.ts"
+compatibility_date = "2026-06-23"
+# nodejs_compat: required for the agents package (McpAgent) and for Node built-ins
+# (crypto, stream, buffer) that workers-oauth-provider and @modelcontextprotocol/sdk rely on.
+# Pinned to 2026-06-23 because the agents 0.16.x API was verified against this date's
+# runtime snapshot; a later date may silently enable breaking runtime changes.
+compatibility_flags = ["nodejs_compat"]
+
+[durable_objects]
+bindings = [
+  { name = "RELAY_BROKER", class_name = "RelayBroker" }
+]
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["RelayBroker"]

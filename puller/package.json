@@ -1,0 +1,24 @@
+{
+  "name": "puller",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": "24"
+  },
+  "scripts": {
+    "dev": "node --watch src/index.js",
+    "start": "node src/index.js",
+    "check": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "ws": "8.21.0"
+  },
+  "devDependencies": {
+    "typescript": "5.9.3",
+    "@types/node": "^24.0.0",
+    "@types/ws": "^8.0.0",
+    "vitest": "^4.0.0"
+  }
+}

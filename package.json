@@ -1,0 +1,17 @@
+{
+  "name": "folio",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc --noEmit",
+    "pretest": "npm ci --prefer-offline 2>/dev/null || npm install --prefer-offline",
+    "test": "vitest run",
+    "check": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@types/node": "^24.13.2",
+    "typescript": "5.9.3",
+    "vitest": "^4.0.0"
+  }
+}
