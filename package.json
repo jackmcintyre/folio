@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "build": "tsc --noEmit",
+    "pretest": "npm ci --prefer-offline 2>/dev/null || npm install --prefer-offline",
     "test": "vitest run",
     "check": "tsc --noEmit"
   },
