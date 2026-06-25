@@ -174,3 +174,45 @@ describe("AC1 — commits on a branch still succeed", () => {
     expect(() => git(dir, "commit -m 'detached'")).not.toThrow();
   });
 });
+
+
+describe("AC1 — hook config is per-worktree (removing a worktree cannot disable main)", () => {
+  // Pins the fix for the shared-core.hooksPath footgun: if the setting lived in
+  // the shared .git/config as an absolute path, `git worktree remove` of the
+  // worktree that owned it would dangle the path and silently disable the hook
+  // for every checkout. With `git config --worktree`, each worktree owns its own.
+  it("setup.sh scopes core.hooksPath per-worktree", () => {
+    const setup = readFileSync(join(ROOT, "scripts", "setup.sh"), "utf8");
+    expect(setup).toMatch(/extensions\.worktreeConfig\s+true/);
+    expect(setup).toMatch(/git config --worktree core\.hooksPath/);
+  });
+
+  it("two worktrees keep independent core.hooksPath values", () => {
+    const main = mkdtempSync(join(tmpdir(), "folio-wtcfg-"));
+    tempRepos.push(main);
+    git(main, "init -q");
+    git(main, "symbolic-ref HEAD refs/heads/main");
+    git(main, "config user.email t@folio");
+    git(main, "config user.name t");
+    // Enable per-worktree config (as setup.sh now does).
+    git(main, "config extensions.worktreeConfig true");
+
+    // Main repo sets its own (self-referential) hooks path.
+    git(main, "config --worktree core.hooksPath /main-hooks");
+    expect(git(main, "config --get core.hooksPath").trim()).toBe("/main-hooks");
+
+    // Add a linked worktree and give it its own value.
+    const wtPath = main + "-wt";
+    git(main, `worktree add -b wt-branch "${wtPath}"`);
+    tempRepos.push(wtPath);
+    git(wtPath, "config --worktree core.hooksPath /wt-hooks");
+    expect(git(wtPath, "config --get core.hooksPath").trim()).toBe("/wt-hooks");
+
+    // Main's value is unchanged by the worktree's own setting.
+    expect(git(main, "config --get core.hooksPath").trim()).toBe("/main-hooks");
+
+    // Removing the linked worktree leaves main's value intact (no dangling path).
+    git(main, `worktree remove --force "${wtPath}"`);
+    expect(git(main, "config --get core.hooksPath").trim()).toBe("/main-hooks");
+  });
+});

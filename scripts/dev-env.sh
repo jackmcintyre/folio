@@ -13,8 +13,14 @@
 #     created) so callers can parse the scheme without a shell import.
 #
 # Determinism contract: the same worktree path yields identical values on every
-# run. Two distinct paths yield distinct hashes (=> distinct state dirs) and a
-# distinct port slot within a strided window.
+# run. Two distinct paths yield distinct hashes (=> distinct state dirs).
+#
+# PORT isolation is *probabilistic*, not guaranteed: ports are selected from a
+# window of FOLIO_PORT_RANGE (default 999) strided slots, so two distinct paths
+# CAN in principle land on the same slot (birthday bound: ~24 concurrent
+# worktrees ~= 50% chance of one collision). State-dir isolation (12 hex digits)
+# is, by contrast, effectively collision-free. Raise FOLIO_PORT_RANGE for more
+# headroom; add an explicit port-probe if a hard guarantee is ever needed.
 #
 # Exports:
 #   FOLIO_WORKTREE_PATH          resolved worktree root used for derivation

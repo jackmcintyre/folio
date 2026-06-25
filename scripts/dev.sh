@@ -25,6 +25,13 @@ _RELAY_PID=""
 _PULLER_PID=""
 _STATE_DIR="$(dirname "$FOLIO_TARGET_DIR")"   # .../<worktree>/.worktree-state/<hash>
 
+# NOTE (intent): cleanup() below does `rm -rf "$_STATE_DIR"`, which holds BOTH the
+# Target dir AND the dedupe store for this worktree. So every normal/interrupt
+# exit discards the dedupe store too -- dedupe state is intentionally ephemeral
+# and scoped to a single `npm run dev` session. If a later story needs the dedupe
+# store to survive restarts, it must live OUTSIDE .worktree-state/<hash>/ (which
+# this EXIT trap owns).
+
 cleanup() {
   local rc=$?
   set +e

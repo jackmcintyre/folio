@@ -10,9 +10,17 @@
 #
 #     npm run setup
 #
-# An absolute path is used so the hook resolves identically regardless of the
-# caller's cwd or git version (relative core.hooksPath resolution has historically
-# been version-dependent). The hook file itself remains the committed hooks/pre-commit.
+# Per-worktree scope (--worktree): the setting is written to THIS worktree's own
+# git config (config.worktree), not the shared .git/config. That removes a real
+# footgun: with a shared, absolute core.hooksPath, `git worktree remove` of the
+# worktree whose path it pointed at would leave a dangling path that git treats
+# as "no hook" -- silently disabling main protection for EVERY checkout.
+# Per-worktree config means each checkout owns its own (self-referential) hooks
+# path, so removing one worktree cannot disable another's (or main's) protection.
+#
+# `extensions.worktreeConfig` must be enabled for git to honour per-worktree
+# config keys; it is a one-time, repo-wide setting (idempotent here). The hook
+# file itself remains the committed hooks/pre-commit.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -24,6 +32,9 @@ if [[ ! -x "$HOOKS_DIR/pre-commit" ]]; then
   exit 1
 fi
 
-git config core.hooksPath "$HOOKS_DIR"
-echo "hooks: core.hooksPath -> $HOOKS_DIR"
+# Honour per-worktree config keys (one-time, repo-wide, idempotent).
+git config extensions.worktreeConfig true
+# Point THIS worktree's git at the committed hooks dir, scoped to this worktree.
+git config --worktree core.hooksPath "$HOOKS_DIR"
+echo "hooks: core.hooksPath -> $HOOKS_DIR (per-worktree)"
 echo "hooks: pre-commit now protects 'main' from direct commits."

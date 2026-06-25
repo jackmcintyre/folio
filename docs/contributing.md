@@ -56,13 +56,17 @@ attempted while `HEAD` is on `main`. It is activated by a single checked-in step
 npm run setup
 ```
 
-`npm run setup` runs `git config core.hooksPath <root>/hooks`, pointing git at the
-committed `hooks/` directory. This is **versioned** (the hook lives in the repo,
-unlike `.git/hooks`) and **installed by one command** (not a per-machine manual
-habit). It is idempotent — safe to re-run after every `git pull`.
+`npm run setup` runs `git config extensions.worktreeConfig true` followed by
+`git config --worktree core.hooksPath <root>/hooks`, pointing this worktree's git
+at the committed `hooks/` directory. The setting is **versioned** (the hook lives
+in the repo, unlike `.git/hooks`), **installed by one command** (not a per-machine
+manual habit), and **per-worktree independent** — it lives in this worktree's own
+`config.worktree`, so removing one worktree cannot disable another's (or `main`'s)
+hook. It is idempotent — safe to re-run after every `git pull`.
 
-Run `npm run setup` once after clone **and** in every new worktree (worktrees do
-not share `.git/config` hook settings with the main checkout).
+Run `npm run setup` once after clone **and** in every new worktree. (Each
+worktree's hook setting lives in its own `config.worktree`, so setup must be run
+in each worktree to activate the hook there.)
 
 **Scope — local direct commits only.** This hook protects against *local* direct
 commits to `main`. Remote PR merges via GitHub do not run local hooks, so they are
@@ -99,7 +103,7 @@ Practical checks before starting parallel work:
 
 Running the relay dev server, the puller, and the dedupe store for local dev or
 integration tests uses **per-worktree ports and state paths** so concurrent runs
-across worktrees never collide (the vehicle-agent port-collision scar,
+across worktrees are very unlikely to collide (the vehicle-agent port-collision scar,
 pre-empted).
 
 `npm run dev` sources `scripts/dev-env.sh`, which derives a **stable, deterministic
@@ -119,7 +123,15 @@ State lives under a **gitignored** `.worktree-state/<hash>/` at the worktree roo
 
 **Determinism contract:** the same worktree path produces identical values on
 every run. Two different worktrees get distinct hashes (and therefore distinct
-state directories) and distinct port slots within a strided window.
+state directories — effectively collision-free).
+
+> **Port isolation is probabilistic, not guaranteed.** Ports are selected from a
+> window of `FOLIO_PORT_RANGE` (default **999**) strided slots, so two distinct
+> worktrees can in principle share a slot (birthday bound: ~24 concurrent
+> worktrees ≈ 50% chance of a single collision) even though their state dirs
+> differ. For typical solo/small-team dev this is comfortably unlikely; raise
+> `FOLIO_PORT_RANGE` for more headroom, or add an explicit port-probe if you need
+> a hard guarantee.
 
 **Cleanup:** the dev script installs an `EXIT` trap that stops the spawned relay
 and puller processes and removes this worktree's `.worktree-state/<hash>/`
