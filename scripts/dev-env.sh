@@ -52,6 +52,7 @@ _folio_hash() {
   elif command -v sha256sum >/dev/null 2>&1; then
     raw="$(printf '%s' "$path" | sha256sum)"
   else
+    printf 'WARNING: neither shasum nor sha256sum found; falling back to cksum (CRC-32). Isolation may weaken under many concurrent worktrees.\n' >&2
     local crc
     crc="$(printf '%s' "$path" | cksum)"
     crc="${crc%% *}"
@@ -76,6 +77,10 @@ folio_dev_env_derive() {
   local path hex hash12 base stride range offset relay_base
   path="$(_folio_worktree_path)"
   hex="$(_folio_hash "$path")"
+  if [[ -z "$hex" ]] || ! [[ "$hex" =~ ^[0-9a-f]+$ ]]; then
+    printf 'ERROR: failed to compute a valid hash for "%s" (got "%s")\n' "$path" "$hex" >&2
+    return 1
+  fi
   hash12="${hex:0:12}"
   base="${FOLIO_PORT_BASE:-9000}"
   stride="${FOLIO_PORT_STRIDE:-4}"
@@ -83,6 +88,16 @@ folio_dev_env_derive() {
 
   if [[ "$range" -lt 1 ]]; then
     printf 'folio(dev-env): ERROR: FOLIO_PORT_RANGE must be >= 1 (got %s)\n' "$range" >&2
+    return 1
+  fi
+
+  if (( base < 1 || base > 65535 )); then
+    printf 'ERROR: FOLIO_PORT_BASE must be in [1, 65535] (got %s)\n' "$base" >&2
+    return 1
+  fi
+  local _max_port=$(( base + (range - 1) * stride + 2 ))
+  if (( _max_port > 65535 )); then
+    printf 'ERROR: derived ports would exceed 65535 (max=%s). Lower FOLIO_PORT_BASE/STRIDE/RANGE.\n' "$_max_port" >&2
     return 1
   fi
 

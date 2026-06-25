@@ -6,8 +6,18 @@
  * plumbing resolves correctly and fails loudly when the contract is violated.
  */
 
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, afterEach } from "vitest";
 import { loadDevConfig } from "../puller/src/dev-config.js";
+
+const ENV_KEYS = ["FOLIO_PULLER_PORT", "FOLIO_TARGET_DIR", "FOLIO_DEDUPE_DIR"] as const;
+const _savedEnv: Record<string, string | undefined> = {};
+for (const k of ENV_KEYS) _savedEnv[k] = process.env[k];
+afterEach(() => {
+  for (const k of ENV_KEYS) {
+    if (_savedEnv[k] === undefined) delete process.env[k];
+    else process.env[k] = _savedEnv[k];
+  }
+});
 
 function setEnv(port: string, target: string, dedupe: string): void {
   process.env.FOLIO_PULLER_PORT = port;

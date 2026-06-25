@@ -35,11 +35,12 @@ function requiredEnv(name: string): string {
 
 export function loadDevConfig(): PullerDevConfig {
   const rawPort = requiredEnv("FOLIO_PULLER_PORT");
+  if (!/^\d+$/.test(rawPort)) {
+    throw new Error(`FOLIO_PULLER_PORT must be a valid port (got "${rawPort}")`);
+  }
   const port = Number.parseInt(rawPort, 10);
-  if (!Number.isInteger(port) || port <= 0 || port > 65535) {
-    throw new Error(
-      `Puller dev config: FOLIO_PULLER_PORT is not a valid port (got "${rawPort}").`,
-    );
+  if (port < 1 || port > 65535) {
+    throw new Error(`FOLIO_PULLER_PORT must be a valid port between 1 and 65535 (got ${port})`);
   }
   return {
     port,
