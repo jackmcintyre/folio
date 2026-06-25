@@ -26,11 +26,15 @@ _PULLER_PID=""
 _STATE_DIR="$(dirname "$FOLIO_TARGET_DIR")"   # .../<worktree>/.worktree-state/<hash>
 
 # NOTE (intent): cleanup() below does `rm -rf "$_STATE_DIR"`, which holds BOTH the
-# Target dir AND the dedupe store for this worktree. So every normal/interrupt
-# exit discards the dedupe store too -- dedupe state is intentionally ephemeral
-# and scoped to a single `npm run dev` session. If a later story needs the dedupe
-# store to survive restarts, it must live OUTSIDE .worktree-state/<hash>/ (which
-# this EXIT trap owns).
+# Target dir AND the dedupe store path for this worktree. Today (Story 1.2) the
+# dedupe store is NOT yet built -- only an empty FOLIO_DEDUPE_DIR path is plumbed --
+# so this wipe is harmless and dedupe state is ephemeral per `npm run dev` session.
+# ARCHITECTURAL CONSTRAINT (AR-9, FR-13): the real dedupe store is DURABLE and MUST
+# survive restarts (7-day retention; the reconciliation source of truth). It is built
+# in Story 3.5 (create-when-needed). When 3.5 lands the real store, it MUST live
+# OUTSIDE .worktree-state/<hash>/ -- which this EXIT trap owns -- so the trap never
+# wipes durable state. The Target dir (transient payload copy) may stay under here;
+# the dedupe store must not.
 
 cleanup() {
   local rc=$?
