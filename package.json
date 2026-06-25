@@ -4,6 +4,8 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "setup": "bash scripts/setup.sh",
+    "dev": "bash scripts/dev.sh",
     "build": "tsc --noEmit",
     "pretest": "npm ci --prefer-offline 2>/dev/null || npm install --prefer-offline",
     "test": "vitest run",

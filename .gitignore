@@ -37,6 +37,13 @@ build/
 coverage/
 *.log
 
+# --- Per-worktree dev state (isolated ports/volumes; regenerable, never commit) ---
+.worktree-state/
+
 # --- OS / editor noise ---
 .DS_Store
 Thumbs.db
+
+# BMAD
+.agents/skills/bmad*
+.opencode/commands/bmad*
