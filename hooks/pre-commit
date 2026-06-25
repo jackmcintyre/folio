@@ -1,0 +1,39 @@
+#!/usr/bin/env bash
+# pre-commit hook — Folio (Story 1.2, AC1).
+#
+# Makes `main` physically uncommittable: any `git commit` attempted while HEAD is
+# on `main` is rejected with a clear message. This protects `main` from agent work
+# that could orphan or corrupt it; every unit of work must land via a pull request
+# from a dedicated branch.
+#
+# This hook is versioned in-repo (committed under hooks/) and activated by pointing
+# git at it: `npm run setup` runs `git config core.hooksPath <root>/hooks`.
+#
+# Scope: LOCAL direct commits only. Remote PR merges via GitHub do not run local
+# hooks, so they are intentionally unaffected (remote branch protection is a
+# separate, deferred concern — see docs/contributing.md).
+set -euo pipefail
+
+branch="$(git symbolic-ref --short HEAD 2>/dev/null || echo "")"
+
+if [[ "$branch" == "main" ]]; then
+  cat >&2 <<'EOF'
+
+folio: ERROR: direct commits to 'main' are blocked.
+
+This repository protects 'main' by construction. Every unit of work must land on
+a dedicated branch and merge via a pull request — never a direct commit to main.
+
+Recover your work — the commit was rejected before it was created, so your
+staged changes are still staged. Move them onto a branch and commit there:
+
+    git switch -c story/bmad-<epic>-<story>-<slug>
+    git commit -m "..."
+
+See docs/contributing.md for the worktree + branch workflow.
+
+EOF
+  exit 1
+fi
+
+exit 0
