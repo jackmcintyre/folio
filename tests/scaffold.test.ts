@@ -121,7 +121,7 @@ describe("AC1 — load-bearing deps exact-pinned", () => {
       expect(deps["@cloudflare/workers-oauth-provider"]).toMatch(/^0\.8\.\d+$/);
     });
 
-    it('@modelcontextprotocol/sdk is range-pinned to ^1.29', () => {
+    it("@modelcontextprotocol/sdk is range-pinned to ^1.29", () => {
       expect(deps["@modelcontextprotocol/sdk"]).toMatch(/^\^1\.29/);
     });
 
@@ -135,7 +135,10 @@ describe("AC1 — load-bearing deps exact-pinned", () => {
     let devDeps: Record<string, string>;
 
     it("puller/package.json readable", () => {
-      const pkg = readJson(path("puller", "package.json")) as Record<string, Record<string, string>>;
+      const pkg = readJson(path("puller", "package.json")) as Record<
+        string,
+        Record<string, string>
+      >;
       deps = pkg["dependencies"] ?? {};
       devDeps = pkg["devDependencies"] ?? {};
       expect(Object.keys(deps).length).toBeGreaterThan(0);

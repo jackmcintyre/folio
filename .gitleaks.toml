@@ -1,0 +1,52 @@
+# .gitleaks — Folio secret-scanning config (Story 1.3 AC2).
+#
+# Secret scanning runs in CI from the first CI run (never added later). This
+# config extends the default gitleaks ruleset (AWS, GCP, GitHub PATs, private
+# keys, generic high-entropy, etc.) and adds one Folio-specific rule that pins
+# the planted TEST secret used by tests/fixtures/leak-fixtures — so the
+# "a planted test secret fails CI" acceptance criterion is provable and stable.
+#
+# `title = "uses default gitleaks rules"` keeps allowlist/extend semantics; we
+# ADD rules, never subtract, so nothing real can slip past.
+
+title = "Folio secret scan (extends gitleaks defaults)"
+
+[extend]
+# Inherit the full built-in ruleset bundled with the pinned gitleaks version.
+# This brings AWS keys, GitHub PATs, private keys, generic high-entropy tokens,
+# etc. without us redefining each one.
+useDefault = true
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Folio test-secret rule.
+#
+# The planted fixture secret is intentionally fake (TEST-FIXTURE- prefix) and
+# lives ONLY under tests/fixtures/leak-fixtures/, so it can never be mistaken
+# for a real credential. CI's production scan EXCLUDES the fixtures dir; this
+# rule exists so the vitest proof (and a dedicated CI step) can demonstrate the
+# scanner fires on a planted secret from commit one.
+# ─────────────────────────────────────────────────────────────────────────────
+[[rules]]
+id = "folio-test-planted-secret"
+description = "Folio TEST planted secret (fixture only; proves the scanner fires)"
+regex = '''TEST-FIXTURE-SECRET-[A-Za-z0-9/+=]{32,}'''
+keywords = ["test-fixture-secret"]
+tags = ["folio", "test-fixture"]
+
+# Allowlist: never scan regenerable installs, generated lockfiles, or the
+# private design-process dirs (all gitignored). The PRODUCTION CI scan also
+# excludes the planted-fixture dir — the deliberately-fake test secret under
+# tests/fixtures/leak-fixtures/ must NOT trip the real gate; a dedicated
+# fixture-scan step (--no-git, scoped to that dir) exercises it instead to prove
+# detection works from commit one.
+[allowlist]
+description = "Skip regenerable installs, generated lockfiles, gitignored dirs, and the planted-fixture dir"
+paths = [
+  '''node_modules/''',
+  '''package-lock\.json''',
+  '''\.worktree-state/''',
+  '''coverage/''',
+  '''dist/''',
+  '''build/''',
+  '''tests/fixtures/leak-fixtures/''',
+]

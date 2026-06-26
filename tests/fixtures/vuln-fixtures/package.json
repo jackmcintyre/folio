@@ -1,0 +1,9 @@
+{
+  "name": "folio-vuln-fixture",
+  "version": "0.0.0",
+  "private": true,
+  "description": "FIXTURE ONLY — pins a known-vulnerable dependency to PROVE the CI CVE scan (npm audit) fires on a vulnerable dep from the first CI run (Story 1.3 AC2). This is NOT installed and is NOT part of Folio's real dependency tree; it lives only under tests/fixtures/vuln-fixtures/. DO NOT add it to a real package.json.",
+  "dependencies": {
+    "lodash": "4.17.4"
+  }
+}

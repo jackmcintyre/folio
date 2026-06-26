@@ -1,0 +1,19 @@
+# .gitleaks.fixtures.toml — minimal config for the fixture-proof scan.
+#
+# This is the SAME folio-test-planted-secret rule as .gitleaks.toml, but WITHOUT
+# the allowlist that excludes tests/fixtures/leak-fixtures/. The production
+# config excludes that dir (so the deliberately-fake test secret never trips the
+# real gate); this config deliberately does NOT, so the fixture-proof scan can
+# demonstrate the scanner fires on the planted secret from commit one.
+#
+# Kept in sync with .gitleaks.toml's rule by tests/ci.test.ts (it asserts both
+# configs carry the identical rule id + regex).
+
+title = "Folio fixture-proof scan (no allowlist exclusion)"
+
+[[rules]]
+id = "folio-test-planted-secret"
+description = "Folio TEST planted secret (fixture only; proves the scanner fires)"
+regex = '''TEST-FIXTURE-SECRET-[A-Za-z0-9/+=]{32,}'''
+keywords = ["test-fixture-secret"]
+tags = ["folio", "test-fixture"]

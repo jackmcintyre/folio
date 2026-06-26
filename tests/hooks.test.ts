@@ -175,7 +175,6 @@ describe("AC1 — commits on a branch still succeed", () => {
   });
 });
 
-
 describe("AC1 — hook config is per-worktree (removing a worktree cannot disable main)", () => {
   // Pins the fix for the shared-core.hooksPath footgun: if the setting lived in
   // the shared .git/config as an absolute path, `git worktree remove` of the
@@ -214,5 +213,71 @@ describe("AC1 — hook config is per-worktree (removing a worktree cannot disabl
     // Removing the linked worktree leaves main's value intact (no dangling path).
     git(main, `worktree remove --force "${wtPath}"`);
     expect(git(main, "config --get core.hooksPath").trim()).toBe("/main-hooks");
+  });
+});
+
+// ────────────────────────────────────────────────────────────────────────────
+// Story 1.3 AC1 — fast local checks (format) on the pre-commit hook.
+//
+// Two-tier CI: the LOCAL tier runs only fast checks so it is never fought and
+// skipped; the CI tier (comprehensive build/test/secret/CVE/coverage) is a
+// separate concern. These tests pin that the hook (a) still blocks main, and
+// (b) ALSO runs a fast format check on staged files, while NOT running the
+// slow gates locally.
+// ────────────────────────────────────────────────────────────────────────────
+describe("Story 1.3 AC1 — the pre-commit hook runs only FAST checks", () => {
+  it("declares the hook as the fast tier and defers comprehensive checks to CI", () => {
+    const content = readFileSync(join(HOOKS_DIR, "pre-commit"), "utf8");
+    // The hook must self-document as the FAST local tier (AC1: "complete quickly
+    // enough not to be fought").
+    expect(content).toMatch(/fast/i);
+    // And it must NOT run the slow comprehensive gates itself — those belong to CI.
+    // We assert the hook explicitly defers them rather than invoking them.
+    expect(content).toMatch(/comprehensive/i);
+    expect(content).toMatch(/CI/);
+  });
+
+  it("runs a format check on STAGED files only (not the whole tree)", () => {
+    const content = readFileSync(join(HOOKS_DIR, "pre-commit"), "utf8");
+    // The fast check is scoped to staged files, which is what keeps it fast.
+    expect(content).toMatch(/git diff --cached/);
+    expect(content).toMatch(/prettier --check/);
+  });
+
+  it("does NOT invoke the slow gates (build/test/audit) locally", () => {
+    // Belt-and-braces: the local hook must not run tsc/vitest/npm audit — that
+    // would make it slow and get fought, defeating the two-tier split.
+    const content = readFileSync(join(HOOKS_DIR, "pre-commit"), "utf8");
+    // Extract Job 2 (the format block) only; the main-block job is allowed to
+    // mention these words in comments. The actual executable format check must
+    // be prettier, not a slow gate.
+    const job2Start = content.indexOf("Job 2");
+    expect(job2Start).toBeGreaterThan(-1);
+    const job2 = content.slice(job2Start);
+    // No slow-gate invocations in the fast-check section.
+    expect(job2).not.toMatch(/\bvitest\b/);
+    expect(job2).not.toMatch(/npm\s+audit/);
+    expect(job2).not.toMatch(/tsc\s+--noEmit/);
+  });
+
+  it("is still executable after the Story 1.3 additions", () => {
+    const mode = statSync(join(HOOKS_DIR, "pre-commit")).mode;
+    expect(mode & 0o111).not.toBe(0);
+  });
+});
+
+describe("Story 1.3 AC1 — the format gate is wired and a script exists", () => {
+  it("package.json exposes a format:check script", () => {
+    const pkg = JSON.parse(readFileSync(join(ROOT, "package.json"), "utf8")) as {
+      scripts: Record<string, string>;
+    };
+    expect(pkg.scripts["format:check"]).toMatch(/prettier --check/);
+  });
+
+  it("package.json exposes an audit (CVE) script for the CI tier", () => {
+    const pkg = JSON.parse(readFileSync(join(ROOT, "package.json"), "utf8")) as {
+      scripts: Record<string, string>;
+    };
+    expect(pkg.scripts["audit"]).toMatch(/npm audit/);
   });
 });

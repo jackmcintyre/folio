@@ -1,0 +1,106 @@
+# Folio CI — the CI tier of two-tier CI (Story 1.3 AC2 + AC3).
+#
+# Runs on the self-hosted GitHub Actions runner (AR-3). From the FIRST CI run
+# (never added later) it: installs FROZEN, runs the comprehensive checks (build
+# + full test suite), runs a SECRET scan (gitleaks) and a DEPENDENCY CVE scan
+# (npm audit). Coverage thresholds on the rigour seams are enforced via the test
+# suite (AC3). A planted test secret and a known-vulnerable pinned dependency
+# each fail CI — proven by the fixture-scan + fixture-audit steps and the
+# vitest proof in tests/ci.test.ts.
+#
+# The LOCAL tier (fast format-only pre-commit hook) is the other half of
+# two-tier CI; see hooks/pre-commit and docs/contributing.md §7. Anything slow
+# lives here, not in the hook.
+#
+# Runner prerequisites (self-hosted): Node 24, npm, gitleaks on PATH. See the
+# deploy runbook (Epic 6) for the runner-setup steps.
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    # Run on PRs targeting main so every merge candidate is gated before merge.
+    branches: [main]
+
+# Cancel superseded runs on the same ref to save self-hosted-runner time.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  comprehensive:
+    name: Build + test + scan
+    runs-on: self-hosted
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          # Full history so the gitleaks git-history scan covers all commits.
+          fetch-depth: 0
+
+      - name: Set up Node 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+
+      # AC2 — FROZEN install: npm ci reads the lockfile exactly and errors on
+      # any drift, so a dependency can't silently move between install and CI.
+      - name: Frozen install (root)
+        run: npm ci
+
+      - name: Frozen install (relay)
+        run: npm ci
+        working-directory: relay
+
+      - name: Frozen install (puller)
+        run: npm ci
+        working-directory: puller
+
+      # AC2 — comprehensive checks. The build gate (tsc --noEmit) and the full
+      # test suite (with coverage) are the heart of the CI tier.
+      - name: Build (type-check)
+        run: npm run build
+
+      # AC3 — coverage thresholds on the rigour seams are enforced here
+      # (--coverage reads vitest.config.ts's thresholds). Fails CI if a seam
+      # drops below its threshold once it has real implementation.
+      - name: Test (with coverage)
+        run: npm run test:ci
+
+      # AC2 — SECRET scan (gitleaks), present from the first CI run. Uses the
+      # pinned .gitleaks.toml which extends the default ruleset and excludes the
+      # deliberately-planted test fixture. A real secret fails CI.
+      - name: Secret scan (production)
+        run: bash scripts/secret-scan.sh
+
+      # AC2 — fixture proof: the scanner MUST fire on a planted test secret.
+      # This is the "a planted test secret fails CI" acceptance, exercised from
+      # commit one. If detection ever regresses, this step fails CI.
+      - name: Secret scan (planted-fixture proof)
+        run: bash scripts/secret-scan.sh --fixtures
+
+      # AC2 — DEPENDENCY CVE scan (npm audit), present from the first CI run.
+      # A known-vulnerable pinned dependency fails CI. Audits the real dep trees
+      # (root + workspaces).
+      - name: CVE scan (npm audit — root)
+        run: npm audit --omit=dev --audit-level=high
+
+      - name: CVE scan (npm audit — relay)
+        run: npm audit --omit=dev --audit-level=high
+        working-directory: relay
+
+      - name: CVE scan (npm audit — puller)
+        run: npm audit --omit=dev --audit-level=high
+        working-directory: puller
+
+      # AC2 — fixture proof: the CVE scan MUST fire on a known-vulnerable pinned
+      # dependency. The fixture (tests/fixtures/vuln-fixtures) pins
+      # lodash@4.17.4 (known critical advisories); npm audit must fail on it.
+      - name: CVE scan (vulnerable-fixture proof)
+        run: npm audit --audit-level=high
+        working-directory: tests/fixtures/vuln-fixtures
+        continue-on-error: false
