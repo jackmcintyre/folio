@@ -5,9 +5,9 @@
 # Present from the FIRST CI run, never added later (AR-3 / NFR-1). Fails (exit 1)
 # on any detected secret.
 #
-# gitleaks is a Go binary (NOT an npm package). The self-hosted CI runner
-# installs it once (see .github/workflows/ci.yml runner-setup + the deploy
-# runbook); locally it is optional. This script requires `gitleaks` on PATH —
+# gitleaks is a Go binary (NOT an npm package). CI installs it in-workflow
+# (see .github/workflows/ci.yml "Install gitleaks", pinned to v8.30.1);
+# locally it is optional. This script requires `gitleaks` on PATH —
 # it does not pretend to fetch a non-existent npm package. If gitleaks is not
 # installed, it exits non-zero with a clear message (CI is the authoritative
 # place the scan runs; the vitest proof verifies the config/fixture/rule
@@ -33,7 +33,7 @@ FIXTURES="$ROOT/tests/fixtures/leak-fixtures"
 if ! command -v gitleaks >/dev/null 2>&1; then
   echo "secret-scan: gitleaks is not installed on PATH." >&2
   echo "Install it (e.g. 'brew install gitleaks' or 'go install github.com/gitleaks/gitleaks/v8@latest')" >&2
-  echo "or rely on CI, where the gitleaks-action runs the scan authoritatively." >&2
+  echo "or rely on CI, which installs gitleaks in-workflow and runs this scan authoritatively." >&2
   echo "The vitest proof (tests/ci.test.ts) verifies the config/rule/fixture without the binary." >&2
   exit 127
 fi
