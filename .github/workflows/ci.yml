@@ -1,0 +1,127 @@
+# Folio CI — the CI tier of two-tier CI (Story 1.3 AC2 + AC3).
+#
+# Runs on the GitHub-hosted ubuntu-latest runner (AR-3). From the FIRST CI run
+# (never added later) it: installs FROZEN, runs the comprehensive checks (build
+# + full test suite), runs a SECRET scan (gitleaks) and a DEPENDENCY CVE scan
+# (npm audit). Coverage thresholds on the rigour seams are enforced via the test
+# suite (AC3). A planted test secret and a known-vulnerable pinned dependency
+# each fail CI — proven by the fixture-scan + fixture-audit steps and the
+# vitest proof in tests/ci.test.ts.
+#
+# The LOCAL tier (fast format-only pre-commit hook) is the other half of
+# two-tier CI; see hooks/pre-commit and docs/contributing.md §7. Anything slow
+# lives here, not in the hook.
+#
+# Runner: GitHub-hosted ubuntu-latest. Node 24 (setup-node) and gitleaks (the
+# pinned v8.30.1 binary, installed in-workflow below) are provisioned here; the
+# job carries no runner-setup prerequisites.
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    # Run on PRs targeting main so every merge candidate is gated before merge.
+    branches: [main]
+
+# Cancel superseded runs on the same ref to save runner time.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  comprehensive:
+    name: Build + test + scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          # Full history so the gitleaks git-history scan covers all commits.
+          fetch-depth: 0
+
+      - name: Set up Node 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+
+      # gitleaks (the secret scan) is a Go binary, not an npm package. On the
+      # GitHub-hosted runner it is installed here, pinned to v8.30.1, so the
+      # secret-scan steps below find it on PATH.
+      - name: Install gitleaks
+        env:
+          GITLEAKS_VERSION: "8.30.1"
+        run: |
+          curl -sSL "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz" \
+            | sudo tar -xz -C /usr/local/bin gitleaks
+          gitleaks version
+
+      # AC2 — FROZEN install: npm ci reads the lockfile exactly and errors on
+      # any drift, so a dependency can't silently move between install and CI.
+      - name: Frozen install (root)
+        run: npm ci
+
+      # NOTE: relay/puller workspaces are NOT frozen-installed here yet. Their
+      # lockfiles are drifted (relay's agents@0.16.2 tree is not fully resolved;
+      # only npm 11 / Node 24 catches it) and the workspaces are built in
+      # Epic 2. The frozen-install + audit steps for them are re-added when
+      # Epic 2 ships them with lockfiles generated under Node 24. (Story 1.3.)
+
+      # AC2 — comprehensive checks. The build gate (tsc --noEmit) and the full
+      # test suite (with coverage) are the heart of the CI tier.
+      - name: Build (type-check)
+        run: npm run build
+
+      # AC3 — coverage thresholds on the rigour seams are enforced here
+      # (--coverage reads vitest.config.ts's thresholds). Fails CI if a seam
+      # drops below its threshold once it has real implementation.
+      - name: Test (with coverage)
+        run: npm run test:ci
+
+      # AC2 — SECRET scan (gitleaks), present from the first CI run. Uses the
+      # pinned .gitleaks.toml which extends the default ruleset and excludes the
+      # deliberately-planted test fixture. A real secret fails CI.
+      - name: Secret scan (production)
+        run: bash scripts/secret-scan.sh
+
+      # AC2 — fixture proof: the scanner MUST fire on a planted test secret.
+      # This is the "a planted test secret fails CI" acceptance, exercised from
+      # commit one. If detection ever regresses, this step fails CI.
+      - name: Secret scan (planted-fixture proof)
+        run: bash scripts/secret-scan.sh --fixtures
+
+      # AC2 — DEPENDENCY CVE scan (npm audit), present from the first CI run.
+      # A known-vulnerable pinned dependency fails CI. Today this audits the
+      # root tree only (relay/puller deferred to Epic 2 — see NOTE above).
+      - name: CVE scan (npm audit — root)
+        run: npm audit --omit=dev --audit-level=high
+
+      # AC2 — fixture proof: the CVE scan MUST fire on a known-vulnerable pinned
+      # dependency. The fixture (tests/fixtures/vuln-fixtures) pins lodash@4.17.4
+      # (known critical advisories). Inverted like the secret-fixture proof: PASS
+      # when npm audit detects the vuln (exit 1); FAIL if detection regresses
+      # (exit 0); surface an audit error (exit 2) rather than masking it. (Raw
+      # `npm audit` with continue-on-error:false would fail CI whenever the
+      # scanner worked — the opposite of a proof.)
+      - name: CVE scan (vulnerable-fixture proof)
+        working-directory: tests/fixtures/vuln-fixtures
+        run: |
+          set +e
+          npm audit --audit-level=high > /tmp/cve-proof.log 2>&1
+          rc=$?
+          set -e
+          if [ "$rc" -eq 1 ]; then
+            echo "cve-proof: OK — planted vulnerable dependency detected (npm audit fired)."
+            exit 0
+          elif [ "$rc" -eq 0 ]; then
+            echo "cve-proof: FAIL — npm audit did NOT detect the planted vulnerable dep." >&2
+            cat /tmp/cve-proof.log >&2
+            exit 1
+          else
+            echo "cve-proof: FAIL — npm audit errored (exit $rc); could not verify detection." >&2
+            cat /tmp/cve-proof.log >&2
+            exit "$rc"
+          fi

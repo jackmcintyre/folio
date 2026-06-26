@@ -1,0 +1,79 @@
+# Folio risk-tier classification (Story 1.3 AC3 / AR-12).
+#
+# Declares which change paths are HUMAN-GATED (require a human to merge — never
+# auto-merged) versus AUTO-MERGEABLE (may machine-merge once CI is green).
+#
+# The auto-merge MECHANISM itself is provided by the Flow build path (it owns
+# the risk-tier classifier and the merge gate). This file is the FOLIO-SIDE
+# declaration of the classification — the single source of truth for which of
+# Folio's paths are sensitive. Flow reads path patterns like these; Folio does
+# not implement the merge decision.
+#
+# Convention (from the architecture's Consistency Conventions + NFR-7):
+# anything touching auth, the write path, Dockerfiles, CI config, or deploy is
+# human-gated; docs / tests / additive changes may auto-merge.
+#
+# Format: two lists of glob patterns matched against the PR's changed paths.
+# A path matching a `human_gated` pattern ALWAYS requires a human merge
+# (human-gated wins over auto-mergeable). A path matching only `auto_mergeable`
+# may machine-merge. A path matching NEITHER defaults to human-gated (fail
+# closed — unknown sensitivity is treated as sensitive).
+#
+version: "1.0"
+updated: "2026-06-26"
+source_of_truth_for: "folio path sensitivity"
+
+# Human-gated: a human must merge these. Touching any one of these paths in a
+# PR forces the whole PR through the human-merge path, regardless of how much
+# docs/tests it also contains.
+human_gated:
+  # Auth path — the security-critical operator-gating surface (AD-10, AR-13).
+  - "relay/src/auth/**"
+  # Write path — the sole-writer boundary, path containment, integrity,
+  # idempotency/reconciliation (AD-3..AD-7, AD-19, AR-13).
+  - "puller/src/write/**"
+  - "puller/src/dedupe/**"
+  - "puller/src/limits/**"
+  # Frame protocol — the frozen Relay<->Puller wire contract (AD-16, AR-5).
+  - "shared/frame-protocol/**"
+  # Container / deployment provenance — non-root base, secrets posture (AD-20).
+  - "puller/Dockerfile"
+  - "**/Dockerfile"
+  - "**/docker-compose*.yml"
+  - "**/compose*.yml"
+  # CI config — the gates themselves; changing the rules must be human-reviewed.
+  - ".github/workflows/**"
+  # Deploy tooling / runbooks.
+  - "scripts/deploy*"
+  - "relay/wrangler.toml"
+  # The two-tier-CI machinery itself.
+  - "hooks/**"
+  - "scripts/secret-scan.sh"
+  - ".gitleaks.toml"
+  - ".gitleaks.fixtures.toml"
+  # Coverage thresholds and this classification (changing the rules is sensitive).
+  - "vitest.config.ts"
+  - "docs/risk-tiers.yaml"
+  # Pinned runtimes / load-bearing deps — a dep bump can change security posture.
+  - "package.json"
+  - "package-lock.json"
+  - "relay/package.json"
+  - "relay/package-lock.json"
+  - "puller/package.json"
+  - "puller/package-lock.json"
+
+# Auto-mergeable: once reviewer-approved AND CI-green, these MAY machine-merge.
+# Restricted to low-blast-radius additive/docs/test work.
+auto_mergeable:
+  - "docs/**/*.md"
+  - "README.md"
+  - "**/*.test.ts"
+  - "tests/**"
+  # Additive, non-sensitive new files not covered above (e.g. a new pure utility
+  # under shared/ that a later story owns). NB: anything under the human_gated
+  # globs above still wins, so this only covers genuinely additive seams.
+  - "shared/**/*.md"
+
+# Default policy when a changed path matches neither list.
+# fail_closed: treat unknown paths as human-gated (safe default).
+default: "human_gated"

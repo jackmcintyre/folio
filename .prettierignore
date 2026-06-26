@@ -1,0 +1,22 @@
+# Regenerable installs & generated state — never format, never commit formatting changes to them
+node_modules/
+dist/
+build/
+coverage/
+.worktree-state/
+package-lock.json
+relay/package-lock.json
+puller/package-lock.json
+
+# Private design process (gitignored anyway)
+_bmad-output/
+.flow/
+_bmad/
+.claude/
+.team/
+.agents/skills/bmad*
+.opencode/commands/bmad*
+
+# The planted-secret fixture is intentionally a literal high-entropy string;
+# reformatting it (e.g. line wrapping) would mangle the scan test. Leave it raw.
+tests/fixtures/leak-fixtures/

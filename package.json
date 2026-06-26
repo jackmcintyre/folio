@@ -9,10 +9,17 @@
     "build": "tsc --noEmit",
     "pretest": "npm ci --prefer-offline 2>/dev/null || npm install --prefer-offline",
     "test": "vitest run",
-    "check": "tsc --noEmit"
+    "test:ci": "vitest run --coverage",
+    "check": "tsc --noEmit",
+    "format": "prettier --write \"**/*.{ts,js,json,md,yml,yaml}\"",
+    "format:check": "prettier --check \"**/*.{ts,js,json,md,yml,yaml}\"",
+    "audit": "npm audit --omit=dev --audit-level=high",
+    "secret-scan": "bash scripts/secret-scan.sh"
   },
   "devDependencies": {
     "@types/node": "^24.13.2",
+    "@vitest/coverage-v8": "^4.1.9",
+    "prettier": "^3.6.2",
     "typescript": "5.9.3",
     "vitest": "^4.0.0"
   }

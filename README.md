@@ -24,12 +24,16 @@ branch workflow and the per-worktree dev-environment isolation scheme.
 
 ## Common scripts (run from the repo root)
 
-| Script          | What it does                                                              |
-| --------------- | ------------------------------------------------------------------------- |
-| `npm run setup` | Activate the versioned pre-commit hook (do this once after clone).        |
-| `npm run dev`   | Launch the relay + puller in an isolated per-worktree dev environment.    |
-| `npm test`      | Run the repo-level vitest suite (acceptance + guardrail tests).           |
-| `npm run check` | Type-check the repo-level TypeScript (`tsc --noEmit`).                    |
+| Script                | What it does                                                           |
+| --------------------- | ---------------------------------------------------------------------- |
+| `npm run setup`       | Activate the versioned pre-commit hook (do this once after clone).     |
+| `npm run dev`         | Launch the relay + puller in an isolated per-worktree dev environment. |
+| `npm test`            | Run the repo-level vitest suite (acceptance + guardrail tests).        |
+| `npm run test:ci`     | Run the suite WITH coverage (enforces rigour-seam thresholds).         |
+| `npm run check`       | Type-check the repo-level TypeScript (`tsc --noEmit`).                 |
+| `npm run format`      | Format the tree with prettier (`format:check` to verify only).         |
+| `npm run audit`       | Dependency CVE scan (`npm audit`, CI tier).                            |
+| `npm run secret-scan` | Secret scan (gitleaks; CI tier). Needs gitleaks on PATH locally.       |
 
 > **Never commit directly to `main`.** Start every unit of work on its own branch
 > (convention: `story/bmad-<epic>-<story>-<slug>`) and merge via pull request. The

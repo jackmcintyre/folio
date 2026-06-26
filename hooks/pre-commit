@@ -1,19 +1,25 @@
 #!/usr/bin/env bash
-# pre-commit hook — Folio (Story 1.2, AC1).
+# pre-commit hook — Folio (Story 1.2 AC1 + Story 1.3 AC1).
 #
-# Makes `main` physically uncommittable: any `git commit` attempted while HEAD is
-# on `main` is rejected with a clear message. This protects `main` from agent work
-# that could orphan or corrupt it; every unit of work must land via a pull request
-# from a dedicated branch.
+# Two jobs, both FAST by design (this is the local tier of two-tier CI):
+#   1. Make `main` physically uncommittable (Story 1.2 AC1).
+#   2. Run only fast checks — format check on staged files — so a commit can't
+#      land formatting drift (Story 1.3 AC1). Comprehensive checks (build, full
+#      test suite, secret scan, CVE scan, coverage) are the CI tier, NOT here:
+#      anything slower than "feels instant" is fought and skipped, so it does not
+#      belong in the local hook. See docs/contributing.md §7 (Two-tier CI).
 #
-# This hook is versioned in-repo (committed under hooks/) and activated by pointing
-# git at it: `npm run setup` runs `git config core.hooksPath <root>/hooks`.
+# This hook is versioned in-repo (committed under hooks/) and activated by
+# pointing git at it: `npm run setup` runs `git config core.hooksPath <root>/hooks`.
 #
 # Scope: LOCAL direct commits only. Remote PR merges via GitHub do not run local
 # hooks, so they are intentionally unaffected (remote branch protection is a
 # separate, deferred concern — see docs/contributing.md).
 set -euo pipefail
 
+# ─────────────────────────────────────────────────────────────────────────────
+# Job 1 — main is physically uncommittable (Story 1.2 AC1)
+# ─────────────────────────────────────────────────────────────────────────────
 branch="$(git symbolic-ref --short HEAD 2>/dev/null || echo "")"
 
 if [[ "$branch" == "main" ]]; then
@@ -34,6 +40,53 @@ See docs/contributing.md for the worktree + branch workflow.
 
 EOF
   exit 1
+fi
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Job 2 — fast format check on STAGED files only (Story 1.3 AC1)
+#
+# Deliberately fast: it touches only the files the developer just staged, never
+# the whole tree, and it runs prettier --check (no rewrite). The comprehensive
+# build + test + secret/CVE/coverage gates live in CI, not here — a slow local
+# hook gets fought and skipped, so only "feels instant" checks belong here.
+# ─────────────────────────────────────────────────────────────────────────────
+# Collect staged, non-deleted files with extensions prettier understands, into
+# an array. Done portably (no bash 4 `mapfile`): the `while read` loop handles
+# spaces/quotes because `git diff -z` NUL-separates and `read -d ''` splits on
+# NUL. macOS ships bash 3.2 by default, so we must not rely on mapfile here.
+staged=()
+while IFS= read -r -d '' f; do
+  staged+=("$f")
+done < <(
+  git diff --cached --name-only --diff-filter=ACMR -z \
+    | grep -Eiz '\.(ts|js|json|md|ya?ml)$' || true
+)
+
+if [[ ${#staged[@]} -eq 0 ]]; then
+  exit 0 # nothing formattable staged — fast no-op
+fi
+
+# Run prettier --check ONLY on the staged subset (fast).
+if ! npx --no-install prettier --check "${staged[@]}" >/dev/null 2>&1; then
+  # Fall back to installing prettier on demand if the local install is absent
+  # (e.g. a fresh worktree before `npm install`). Still scoped to staged files.
+  if ! npx prettier --check "${staged[@]}" >/dev/null 2>&1; then
+    cat >&2 <<'EOF'
+
+folio: ERROR: pre-commit format check failed.
+
+One or more staged files are not formatted to the repo's prettier config. This
+is a FAST local check (Story 1.3 AC1) — it runs on staged files only so it
+completes quickly. Fix with:
+
+    npm run format         # or: npx prettier --write <files>
+
+then re-stage and commit. The comprehensive checks (build, test, secret/CVE
+scan, coverage) run in CI, not in this hook.
+
+EOF
+    exit 1
+  fi
 fi
 
 exit 0
