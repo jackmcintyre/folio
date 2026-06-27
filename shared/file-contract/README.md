@@ -117,3 +117,22 @@ published schema (Story 1.5 AC4). Because the schema is published as a
 serialisable descriptor plus a dependency-free validator, a generic client can
 construct and check a request, and parse a Receipt or any typed error, without
 any Claude- or KB-specific knowledge.
+
+## Contract test (AC3)
+
+The frozen shapes above are pinned by
+[`tests/file-contract.test.ts`](../../tests/file-contract.test.ts) — the contract
+test that fails CI on any incompatible change (Story 1.5 AC3). Run it with:
+
+```sh
+npm test
+```
+
+From the perspective of a generic client using only the published schema, it
+asserts: the explicit version field; the Receipt key set
+`{ v, path, filename, timestamp }` (rejecting unknown keys, absolute paths, and
+bare-`Z` timestamps); the canonical eight typed-error tokens as an exact set; the
+required idempotency-key grammar, including that a call missing the key is
+invalid; and that a generic client can construct a valid request and parse every
+Receipt and typed error (AC4). Rename a Receipt key, drop a token, or reshape the
+schema in `index.ts` and the suite fails — the surface cannot silently regress.
