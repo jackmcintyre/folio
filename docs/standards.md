@@ -1,26 +1,5 @@
 version: "0.2.0"
 updated: "2026-06-27"
-
-must_rule_cap: 10
-must_rules:
-
-- name: "sole-writer"
-  rule: "Only the Puller writes the filesystem; no other component touches the Target directory (AD-3)."
-- name: "handler-deliver-only"
-  rule: "The handler calls only deliver(); it contains no transport or filesystem calls (AD-1)."
-- name: "no-body-at-rest"
-  rule: "No Folio store retains payload content at rest — dedupe store, traces, and error logs hold token + correlationId + derived path only (AD-21)."
-- name: "typed-errors-only"
-  rule: "Failures use the canonical typed-token set (AD-8); no branching on prose or generic Error strings."
-- name: "use-allowlist-libraries"
-  rule: "Use the vetted library named in docs/primitive-allowlist.md for OAuth/auth, ID generation, rate-limiting, and time/timezone; do not hand-roll them."
-- name: "single-containment-module"
-  rule: "All path derivation flows through the one audited containment primitive in puller/src/write (AD-6); no per-call hand-rolled path checks."
-- name: "trace-no-body"
-  rule: "Construct every trace via shared/observability, whose record type has no body field by construction (AD-12, AD-21)."
-- name: "idempotency-key-required"
-  rule: "Every Filing carries a valid idempotency key; reserve-before-write and reconcile same-key retries to one Receipt (AD-5, AD-19)."
-
 criteria:
 
 - name: "story-aligned"

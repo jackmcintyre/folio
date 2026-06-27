@@ -179,32 +179,38 @@ describe("AC1 — AR-13 consult-points for the rigour seams", () => {
 });
 
 // ────────────────────────────────────────────────────────────────────────────
-// AC2 — bounded rulebook: docs/standards.md MUST rules capped at 10 (enforced).
+// AC2 — bounded rulebook: the MUST-rules list is capped at 10 (CI-enforced).
+//
+// The rulebook lives in CLAUDE.md (the "## Bounded MUST-rules" fenced block),
+// NOT in docs/standards.md. docs/standards.md is the Flow reviewer rubric — a
+// strict version/updated/criteria YAML contract whose parser rejects any extra
+// top-level key, so the must_rule_cap/must_rules block cannot live there without
+// breaking every Flow reviewer run. The two artifacts are kept in separate files.
 // ────────────────────────────────────────────────────────────────────────────
 describe("AC2 — rulebook MUST rules are capped (CI fails if exceeded)", () => {
-  let standards: string;
+  let rulebook: string;
 
-  it("docs/standards.md declares a must_rule_cap", () => {
-    standards = read("docs/standards.md");
-    expect(standards).toMatch(/must_rule_cap:\s*\d+/);
+  it("CLAUDE.md declares a must_rule_cap", () => {
+    rulebook = read("CLAUDE.md");
+    expect(rulebook).toMatch(/must_rule_cap:\s*\d+/);
   });
 
   it("the cap is ≤ 10 (the rulebook stays legible)", () => {
-    standards = read("docs/standards.md");
-    const cap = Number.parseInt(standards.match(/must_rule_cap:\s*(\d+)/)![1]!, 10);
+    rulebook = read("CLAUDE.md");
+    const cap = Number.parseInt(rulebook.match(/must_rule_cap:\s*(\d+)/)![1]!, 10);
     expect(cap).toBeLessThanOrEqual(10);
   });
 
   it("the count of MUST rules does not exceed the cap (the enforced gate)", () => {
-    standards = read("docs/standards.md");
-    const cap = Number.parseInt(standards.match(/must_rule_cap:\s*(\d+)/)![1]!, 10);
+    rulebook = read("CLAUDE.md");
+    const cap = Number.parseInt(rulebook.match(/must_rule_cap:\s*(\d+)/)![1]!, 10);
 
-    // Isolate the must_rules block: from "must_rules:" up to the next top-level
-    // key ("criteria:"), so review criteria are never mis-counted as MUST rules.
-    const start = standards.indexOf("must_rules:");
+    // Isolate the must_rules block: from "must_rules:" up to the end of its fenced
+    // code block (```), so prose rules elsewhere in CLAUDE.md are never counted.
+    const start = rulebook.indexOf("must_rules:");
     expect(start).toBeGreaterThanOrEqual(0);
-    const after = standards.slice(start);
-    const endRel = after.indexOf("\ncriteria:");
+    const after = rulebook.slice(start);
+    const endRel = after.indexOf("\n```");
     const block = endRel >= 0 ? after.slice(0, endRel) : after;
 
     const mustRuleCount = [...block.matchAll(/^\s*-\s+name:/gm)].length;
@@ -214,7 +220,7 @@ describe("AC2 — rulebook MUST rules are capped (CI fails if exceeded)", () => 
   });
 
   it("the existing review criteria are preserved (Flow reviewer depends on them)", () => {
-    standards = read("docs/standards.md");
+    const standards = read("docs/standards.md");
     expect(standards).toMatch(/criteria:/);
     expect(standards).toMatch(/story-aligned/);
     expect(standards).toMatch(/tests-cover-acs/);
