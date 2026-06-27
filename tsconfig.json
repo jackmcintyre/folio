@@ -10,5 +10,5 @@
     "skipLibCheck": true,
     "types": ["node"]
   },
-  "include": ["tests/**/*", "vitest.config.ts"]
+  "include": ["tests/**/*", "shared/**/*", "vitest.config.ts"]
 }

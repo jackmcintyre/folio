@@ -1,0 +1,12 @@
+{
+  "name": "@folio/observability",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./index.ts"
+  },
+  "devDependencies": {
+    "typescript": "5.9.3"
+  }
+}
