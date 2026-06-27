@@ -15,7 +15,7 @@
  * (mirroring the rigour-seam coverage gates).
  */
 
-import type { Frame, FrameRequest, FrameResponse } from "../../../shared/frame-protocol/index.js";
+import type { Frame } from "../../../shared/frame-protocol/index.js";
 import {
   encode as canonicalEncode,
   decode as canonicalDecode,
@@ -30,11 +30,3 @@ export function relayEncode(frame: Frame): Uint8Array {
 export function relayDecode(wire: Uint8Array): Frame {
   return canonicalDecode(wire);
 }
-
-// Re-export the request/response builders' TYPES so the broker can construct
-// frames without reaching across to the shared package in its own domain code.
-export type {
-  FrameRequest as RelayFrameRequest,
-  FrameResponse as RelayFrameResponse,
-  Frame as RelayFrame,
-};

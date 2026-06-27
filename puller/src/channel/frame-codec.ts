@@ -15,7 +15,7 @@
  * (mirroring the rigour-seam coverage gates).
  */
 
-import type { Frame, FrameRequest, FrameResponse } from "../../../shared/frame-protocol/index.js";
+import type { Frame } from "../../../shared/frame-protocol/index.js";
 import {
   encode as canonicalEncode,
   decode as canonicalDecode,
@@ -30,9 +30,3 @@ export function pullerEncode(frame: Frame): Uint8Array {
 export function pullerDecode(wire: Uint8Array): Frame {
   return canonicalDecode(wire);
 }
-
-export type {
-  FrameRequest as PullerFrameRequest,
-  FrameResponse as PullerFrameResponse,
-  Frame as PullerFrame,
-};
