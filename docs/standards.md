@@ -1,5 +1,5 @@
-version: "0.1.0"
-updated: "2026-05-19"
+version: "0.2.0"
+updated: "2026-06-27"
 criteria:
 
 - name: "story-aligned"
@@ -18,3 +18,11 @@ criteria:
   what: "Every named failure mode in the diff throws a DomainError subclass; uncaught throws are bugs."
   check: "Inspect new throw sites; assert they throw a class extending DomainError with a one-line user-facing message."
   anti_criterion: "throw new Error('...') or returning {error: '...'} envelopes for known failures."
+- name: "architectural-invariant-lint"
+  what: "AD-1 layering law and the generic-by-contract (no Claude/KB identifiers) rule are enforced as lint, so the swappability invariant does not depend on human review."
+  check: "`npm run lint` (ESLint flat config). `folio/handler-layering` forbids `relay/src/handler/**` from importing `relay/src/transport/**` or the Node fs builtins (`node:fs`, `fs`, `node:fs/promises`, `fs/promises` and their subpaths). `folio/no-claude-kb-identifiers` rejects the case-insensitive tokens `claude`, `anthropic`, `knowledgebase`, `knowledge-base`, `knowledge_base`, and any `@anthropic-ai/*` import, across identifiers and string/comment content in `relay/src/**` and `puller/src/**` only (the bare token `kb` is excluded; `shared/` is out of scope). Each rule is mutation-checked in tests/lint.test.ts."
+  anti_criterion: "A handler that reaches transport or the filesystem directly, or a relay/puller file carrying a Claude/KB-ism — both weld the product to one consumer and slip past review."
+- name: "complexity-ceilings"
+  what: "Legibility ceilings on the product source (`relay/src/**`, `puller/src/**`, `shared/**`) keep the codebase readable by machine, not by reviewer patience."
+  check: "Cyclomatic complexity <= 10 (`complexity`); nesting depth <= 4 (`max-depth`); function size <= 60 lines (`max-lines-per-function`); file size <= 300 lines (`max-lines`); dead code rejected — unused variables (`@typescript-eslint/no-unused-vars`) and unreachable code (`no-unreachable`). All via `npm run lint` (ESLint). Duplication < 1% with a 50-token minimum clone (`npm run lint:dupe`, jscpd over `relay/src`, `puller/src`, `shared`). Unused exports/files rejected (`npm run lint:dead-code`, knip)."
+  anti_criterion: "A function/file that blows past a ceiling, a copy-paste clone, or dead code that a later reader has to reason about. Tune the numbers here and in eslint.config.js / .jscpd.json together."
