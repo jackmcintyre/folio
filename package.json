@@ -14,13 +14,21 @@
     "format": "prettier --write \"**/*.{ts,js,json,md,yml,yaml}\"",
     "format:check": "prettier --check \"**/*.{ts,js,json,md,yml,yaml}\"",
     "audit": "npm audit --omit=dev --audit-level=high",
-    "secret-scan": "bash scripts/secret-scan.sh"
+    "secret-scan": "bash scripts/secret-scan.sh",
+    "lint": "eslint .",
+    "lint:dupe": "jscpd relay/src puller/src shared",
+    "lint:dead-code": "knip --no-progress",
+    "lint:all": "eslint . && jscpd relay/src puller/src shared && knip --no-progress"
   },
   "devDependencies": {
     "@types/node": "^24.13.2",
     "@vitest/coverage-v8": "^4.1.9",
+    "eslint": "9.39.4",
+    "jscpd": "4.2.5",
+    "knip": "6.21.0",
     "prettier": "^3.6.2",
     "typescript": "5.9.3",
+    "typescript-eslint": "8.62.0",
     "vitest": "^4.0.0"
   }
 }

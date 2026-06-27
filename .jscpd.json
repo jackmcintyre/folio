@@ -1,0 +1,20 @@
+{
+  "$schema": "https://unpkg.com/@jscpd/core@4.2.5/schema/jscpd.json",
+  "threshold": 1,
+  "minTokens": 50,
+  "format": ["typescript", "javascript"],
+  "ignore": [
+    "**/node_modules/**",
+    "**/package-lock.json",
+    "**/coverage/**",
+    "**/dist/**",
+    "**/build/**",
+    "**/_bmad-output/**",
+    "**/.flow/**",
+    "**/tests/fixtures/**",
+    "**/*.config.*"
+  ],
+  "output": "./coverage/jscpd",
+  "silent": true,
+  "absolute": true
+}
