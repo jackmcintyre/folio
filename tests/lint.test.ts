@@ -157,6 +157,26 @@ describe("AC2 — no Claude/KB identifiers (folio/no-claude-kb-identifiers)", ()
     expect(res.stdout).toContain("folio/no-claude-kb-identifiers");
   });
 
+  it("fails on the 'knowledgebase' token (bare word, no separator)", () => {
+    // AC2 enumerates `knowledgebase` as a forbidden bare-word token. The rule
+    // matches it case-insensitively as a substring, so plant it in a relay
+    // string and assert the rule fires (closes the coverage gap left when only
+    // the hyphen/underscore phrases were mutation-tested).
+    plant("relay/src/__lint_probe__/has-kb-word.ts", `export const sync = "knowledgebase";\n`);
+    const res = eslintAll();
+    expect(res.status).not.toBe(0);
+    expect(res.stdout).toContain("folio/no-claude-kb-identifiers");
+  });
+
+  it("fails on the 'knowledge_base' token (underscore separator)", () => {
+    // AC2 enumerates `knowledge_base` (underscore) as a forbidden phrase. Plant
+    // it in a puller identifier and assert the rule fires.
+    plant("puller/src/__lint_probe__/has-kb-underscore.ts", `export const knowledge_base = 1;\n`);
+    const res = eslintAll();
+    expect(res.status).not.toBe(0);
+    expect(res.stdout).toContain("folio/no-claude-kb-identifiers");
+  });
+
   it("fails on an @anthropic-ai/* import", () => {
     plant(
       "relay/src/__lint_probe__/anthropic-import.ts",
