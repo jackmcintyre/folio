@@ -38,8 +38,36 @@ Each rule cites the spine version it was checked against.
 9. Trace only `action → derived path → outcome` per Filing (token +
    correlationId + derived path). Construct traces via `shared/observability`,
    which has no field for body by construction. <!-- spine=2026-06-23 -->
-10. Keep `docs/standards.md` ≤ 10 named MUST rules (CI-enforced cap) so the
-    rulebook an agent must obey stays legible. <!-- spine=2026-06-23 -->
+10. Keep the bounded MUST-rules list below ≤ 10 named rules (CI-enforced cap) so
+    the rulebook an agent must obey stays legible. <!-- spine=2026-06-23 -->
+
+## Bounded MUST-rules (machine-checked)
+
+The agent rulebook lives here, NOT in `docs/standards.md` (that file is the Flow
+reviewer rubric, a strict `version`/`updated`/`criteria` contract — the rulebook
+and the reviewer rubric are two different artifacts and must not share a file).
+The cap below is asserted by `tests/legibility.test.ts`; exceeding it fails CI.
+
+```yaml
+must_rule_cap: 10
+must_rules:
+  - name: "sole-writer"
+    rule: "Only the Puller writes the filesystem; no other component touches the Target directory (AD-3)."
+  - name: "handler-deliver-only"
+    rule: "The handler calls only deliver(); it contains no transport or filesystem calls (AD-1)."
+  - name: "no-body-at-rest"
+    rule: "No Folio store retains payload content at rest — dedupe store, traces, and error logs hold token + correlationId + derived path only (AD-21)."
+  - name: "typed-errors-only"
+    rule: "Failures use the canonical typed-token set (AD-8); no branching on prose or generic Error strings."
+  - name: "use-allowlist-libraries"
+    rule: "Use the vetted library named in docs/primitive-allowlist.md for OAuth/auth, ID generation, rate-limiting, and time/timezone; do not hand-roll them."
+  - name: "single-containment-module"
+    rule: "All path derivation flows through the one audited containment primitive in puller/src/write (AD-6); no per-call hand-rolled path checks."
+  - name: "trace-no-body"
+    rule: "Construct every trace via shared/observability, whose record type has no body field by construction (AD-12, AD-21)."
+  - name: "idempotency-key-required"
+    rule: "Every Filing carries a valid idempotency key; reserve-before-write and reconcile same-key retries to one Receipt (AD-5, AD-19)."
+```
 
 ## Module rules
 
