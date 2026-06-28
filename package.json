@@ -20,6 +20,9 @@
     "lint:dead-code": "knip --no-progress",
     "lint:all": "eslint . && jscpd relay/src puller/src shared && knip --no-progress"
   },
+  "dependencies": {
+    "ulid": "2.4.0"
+  },
   "devDependencies": {
     "@types/node": "^24.13.2",
     "@types/ws": "8.18.1",

@@ -8,6 +8,7 @@
         "relay/src/handler/index.ts",
         "relay/src/backend/index.ts",
         "relay/src/broker/index.ts",
+        "relay/src/broker/durable-object.ts",
         "puller/src/index.ts",
         "puller/src/channel/index.ts",
         "puller/src/write/index.ts",
@@ -15,7 +16,8 @@
         "puller/src/limits/index.ts",
         "shared/frame-protocol/index.ts"
       ],
-      "project": ["relay/src/**/*.ts", "puller/src/**/*.ts", "shared/**/*.ts"]
+      "project": ["relay/src/**/*.ts", "puller/src/**/*.ts", "shared/**/*.ts"],
+      "ignoreDependencies": ["cloudflare"]
     }
   }
 }

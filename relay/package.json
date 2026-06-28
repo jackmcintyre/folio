@@ -12,7 +12,8 @@
   "dependencies": {
     "agents": "0.16.2",
     "@cloudflare/workers-oauth-provider": "0.8.1",
-    "@modelcontextprotocol/sdk": "^1.29.0"
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "ulid": "2.4.0"
   },
   "devDependencies": {
     "typescript": "5.9.3",
