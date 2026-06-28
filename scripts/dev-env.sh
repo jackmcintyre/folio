@@ -30,6 +30,11 @@
 #   FOLIO_PULLER_PORT            port the puller listens on
 #   FOLIO_TARGET_DIR             per-worktree Target (write) directory
 #   FOLIO_DEDUPE_DIR             per-worktree dedupe store directory
+#   FOLIO_RELAY_URL              ws:// URL the puller dials out to (derived from
+#                                FOLIO_RELAY_PORT unless overridden)
+#   FOLIO_PULLER_BEARER          static hop bearer for the dev puller (DEV STUB
+#                                only — a real operator-gated secret lands in
+#                                Epic 4; override FOLIO_PULLER_BEARER to use one)
 #
 # Tunables (override via env before sourcing/executing):
 #   FOLIO_WORKTREE_PATH  force the worktree path (used by tests)
@@ -117,6 +122,13 @@ folio_dev_env_derive() {
   export FOLIO_PULLER_PORT=$(( relay_base + 2 ))
   export FOLIO_TARGET_DIR="$path/.worktree-state/$hash12/target"
   export FOLIO_DEDUPE_DIR="$path/.worktree-state/$hash12/dedupe"
+
+  # The outbound channel (Story 2.1): where the puller dials out, and the dev
+  # stub bearer it presents. The URL derives from the relay port; the bearer is
+  # a DEV-ONLY stub — never a real secret (override FOLIO_PULLER_BEARER, or wait
+  # for Epic 4's operator-gated auth). Both honour a caller-provided override.
+  export FOLIO_RELAY_URL="${FOLIO_RELAY_URL:-ws://localhost:$relay_base}"
+  export FOLIO_PULLER_BEARER="${FOLIO_PULLER_BEARER:-dev-stub-bearer-change-me}"
 }
 
 # True when this file is being sourced rather than executed directly.
@@ -129,7 +141,7 @@ folio_dev_env_derive
 
 # When executed directly, emit KEY=VALUE for tooling/tests and stop.
 if ! _folio_is_sourced; then
-  for var in FOLIO_WORKTREE_PATH FOLIO_WORKTREE_HASH FOLIO_RELAY_PORT FOLIO_RELAY_INSPECTOR_PORT FOLIO_PULLER_PORT FOLIO_TARGET_DIR FOLIO_DEDUPE_DIR; do
+  for var in FOLIO_WORKTREE_PATH FOLIO_WORKTREE_HASH FOLIO_RELAY_PORT FOLIO_RELAY_INSPECTOR_PORT FOLIO_PULLER_PORT FOLIO_TARGET_DIR FOLIO_DEDUPE_DIR FOLIO_RELAY_URL FOLIO_PULLER_BEARER; do
     printf '%s=%s\n' "$var" "${!var}"
   done
   exit 0
