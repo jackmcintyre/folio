@@ -25,6 +25,7 @@ import {
   type ChannelCallbacks,
   type ChannelConfig,
   type ChannelStatus,
+  type TimerSource,
 } from "../puller/src/channel/index.js";
 import { encode, type Frame } from "../shared/frame-protocol/index.js";
 
@@ -51,6 +52,57 @@ async function sleepUntil(
     await sleep(8);
   }
   throw new Error(`sleepUntil timed out waiting for: ${msg}`);
+}
+
+// ─── fake-timer source (for the dial-failure self-heal test) ─────────────────
+
+/**
+ * A minimal injectable TimerSource that records every scheduled setTimeout so a
+ * test can assert the channel scheduled a bounded reconnect (and drive it)
+ * WITHOUT real time elapsing. Only setTimeout/clearTimeout are exercised by the
+ * reconnect path; setInterval/clearInterval are stubbed (the channel never
+ * reaches the heartbeat when the dial fails before connecting).
+ */
+function fakeTimerSource(): TimerSource & {
+  /** Delays (ms) of every setTimeout still pending (cleared ones drop out). */
+  readonly pendingDelays: number[];
+  /** Fire the most-recently-scheduled pending timer (drives one reconnect). */
+  fireLast: () => void;
+} {
+  const handles = new Map<number, { fn: () => void; ms: number }>();
+  let nextId = 0;
+  const ts: TimerSource = {
+    setTimeout: (fn, ms) => {
+      const id = ++nextId;
+      handles.set(id, { fn, ms });
+      return id as unknown as ReturnType<typeof setTimeout>;
+    },
+    clearTimeout: (h) => {
+      handles.delete(h as unknown as number);
+    },
+    setInterval: () => ++nextId as unknown as ReturnType<typeof setTimeout>,
+    clearInterval: () => {
+      /* stub — unreachable on the dial-failure path */
+    },
+  };
+  // pendingDelays is a live getter (defineProperty — Object.assign would
+  // snapshot the value at assign time); fireLast is a plain function property.
+  Object.defineProperty(ts, "pendingDelays", {
+    get: () => [...handles.values()].map((h) => h.ms),
+  });
+  Object.assign(ts, {
+    fireLast(): void {
+      const entries = [...handles.entries()];
+      const last = entries[entries.length - 1];
+      if (!last) return;
+      handles.delete(last[0]); // setTimeout is one-shot — consume before firing
+      last[1].fn();
+    },
+  });
+  return ts as TimerSource & {
+    readonly pendingDelays: number[];
+    fireLast: () => void;
+  };
 }
 
 // ─── relay stand-in (the "test client" — a real WS server) ───────────────────
@@ -322,6 +374,43 @@ describe("AC3 — reconnects with bounded backoff, re-authenticates, observable 
     expect(history[0]).toBe("connecting");
     expect(history).toContain("connected");
     expect(history).toContain("disconnected");
+  });
+
+  it("a synchronous dial failure self-heals: no crash, bounded-backoff reconnect", () => {
+    // A malformed relay URL makes `new WebSocket(url)` throw synchronously. Dial
+    // runs from a setTimeout on reconnect; an uncaught throw there kills the
+    // puller — the opposite of the self-healing AC3 promises. The channel MUST
+    // route the failure through the same bounded-backoff path as any drop.
+    const timers = fakeTimerSource();
+    const history: ChannelStatus[] = [];
+    const ch = createChannel(
+      {
+        relayUrl: "not-a-valid-url",
+        bearer: GOOD_BEARER,
+        heartbeatIntervalMs: 60,
+        heartbeatTimeoutMs: 90,
+        minReconnectMs: 10,
+        maxReconnectMs: 80,
+        timers,
+      },
+      { onStatus: (s) => history.push(s) },
+    );
+    openChannels.push(ch);
+
+    // start() → dial() → construction throws → caught → scheduleReconnect. The
+    // throw must NOT escape start() (that would crash the host on reconnect).
+    expect(() => ch.start()).not.toThrow();
+    expect(ch.getStatus()).toBe("disconnected");
+    // Exactly one reconnect is scheduled with a bounded (>= minReconnectMs) delay.
+    expect(timers.pendingDelays).toHaveLength(1);
+    expect(timers.pendingDelays[0]).toBeGreaterThanOrEqual(10);
+
+    // Driving the reconnect re-dials, fails again, and schedules another bounded
+    // attempt — the channel keeps retrying rather than dying on a bad config.
+    timers.fireLast();
+    expect(ch.getStatus()).toBe("disconnected");
+    expect(timers.pendingDelays).toHaveLength(1);
+    expect(timers.pendingDelays[0]).toBeLessThanOrEqual(80); // still bounded by the cap
   });
 });
 

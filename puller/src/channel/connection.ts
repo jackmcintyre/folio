@@ -114,9 +114,21 @@ export class OutboundChannel {
     this.dropGuard = false;
     this.setStatus("connecting");
     console.log(`[channel] dialing ${this.cfg.relayUrl} (attempt ${this.attempt + 1})`);
-    const ws = new WebSocket(this.cfg.relayUrl, [], {
-      headers: { Authorization: `Bearer ${this.cfg.bearer}` },
-    });
+    let ws: WebSocket;
+    try {
+      ws = new WebSocket(this.cfg.relayUrl, [], {
+        headers: { Authorization: `Bearer ${this.cfg.bearer}` },
+      });
+    } catch (err) {
+      // A synchronous construction failure (e.g. a malformed relay URL) MUST NOT
+      // escape the reconnect timer and crash the process. Dial is invoked from a
+      // setTimeout callback on reconnect; an uncaught throw there kills the
+      // puller — the opposite of the self-healing AC3 promises. Route it through
+      // the same bounded-backoff path as any other failure and keep retrying.
+      console.warn(`[channel] dial failed: ${(err as Error).message}`);
+      this.scheduleReconnect();
+      return;
+    }
     this.ws = ws;
     ws.on("open", () => this.onOpen(ws));
     ws.on("pong", () => this.heartbeat?.notePong());
@@ -163,6 +175,16 @@ export class OutboundChannel {
     this.dropGuard = true;
     this.stopHeartbeat();
     this.ws = undefined;
+    this.scheduleReconnect();
+  }
+
+  /**
+   * Schedule the next reconnect attempt with bounded exponential backoff, or
+   * settle at disconnected when stopped. Shared by the drop path (a live link
+   * that died) and the dial-failure path (a connection that never formed) so
+   * every failure mode reaches the SAME bounded curve — none crashes the host.
+   */
+  private scheduleReconnect(): void {
     if (this.stopped) {
       this.setStatus("disconnected");
       return;
