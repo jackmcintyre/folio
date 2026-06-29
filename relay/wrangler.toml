@@ -9,9 +9,17 @@ compatibility_flags = ["nodejs_compat"]
 
 [durable_objects]
 bindings = [
-  { name = "RELAY_BROKER", class_name = "RelayBroker" }
+  { name = "RELAY_BROKER", class_name = "RelayBroker" },
+  # The McpAgent (Streamable HTTP transport) is itself a Durable Object; the
+  # agents package's default binding name is MCP_OBJECT, one instance per MCP
+  # session. (Story 2.3)
+  { name = "MCP_OBJECT", class_name = "FolioMcp" }
 ]
 
 [[migrations]]
 tag = "v1"
 new_sqlite_classes = ["RelayBroker"]
+
+[[migrations]]
+tag = "v2"
+new_sqlite_classes = ["FolioMcp"]

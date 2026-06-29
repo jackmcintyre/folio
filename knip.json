@@ -4,9 +4,12 @@
     ".": {
       "entry": [
         "relay/src/transport/index.ts",
+        "relay/src/transport/tools.ts",
+        "relay/src/transport/guard.ts",
         "relay/src/auth/index.ts",
         "relay/src/handler/index.ts",
         "relay/src/backend/index.ts",
+        "relay/src/backend/relay-backend.ts",
         "relay/src/broker/index.ts",
         "relay/src/broker/durable-object.ts",
         "puller/src/index.ts",
@@ -17,7 +20,7 @@
         "shared/frame-protocol/index.ts"
       ],
       "project": ["relay/src/**/*.ts", "puller/src/**/*.ts", "shared/**/*.ts"],
-      "ignoreDependencies": ["cloudflare"]
+      "ignoreDependencies": ["cloudflare", "agents", "@modelcontextprotocol/sdk"]
     }
   }
 }
